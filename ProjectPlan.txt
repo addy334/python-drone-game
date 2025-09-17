@@ -1,0 +1,83 @@
+📋 Project Plan
+Here is the complete project broken down into phases, steps, and substeps. We will refer to these numbers going forward.
+
+Phase 1: Project Foundation
+Step 1.1: Setup Environment
+
+Substep 1.1.1: Create project folder and Python virtual environment.
+
+Substep 1.1.2: Install the pygame library.
+
+Step 1.2: Create the Game Window
+
+Substep 1.2.1: Write the initial main.py script to create a blank, closable window. (Completed)
+
+Step 1.3: Create the Drone Physics Model
+
+Substep 1.3.1: Write the initial drone.py script with the Drone class. (Completed)
+
+Step 1.4: Integrate and Control Drone
+
+Substep 1.4.1: Modify main.py to import, create an instance of, update, and draw the drone.
+
+Substep 1.4.2: Modify main.py to handle key presses that call the drone's flap() method.
+
+Phase 2: Core Gameplay Mechanics
+Step 2.1: Create Obstacles
+
+Substep 2.1.1: Create a game_elements.py file.
+
+Substep 2.1.2: Write an Obstacle class that can manage its own position and movement.
+
+Step 2.2: Manage Obstacles
+
+Substep 2.2.1: Modify main.py to spawn Obstacle instances periodically.
+
+Substep 2.2.2: Modify main.py to update and draw all active obstacles, removing ones that are off-screen.
+
+Step 2.3: Implement Game Logic
+
+Substep 2.3.1: Add collision detection between the drone and obstacles in main.py.
+
+Substep 2.3.2: Create a simple "Game Over" state that freezes the game on collision.
+
+Phase 3: Scoring and User Interface (UI)
+Step 3.1: Implement Scoring
+
+Substep 3.1.1: Write a Scoreboard class in game_elements.py to display text.
+
+Substep 3.1.2: Modify main.py to detect when the drone successfully passes an obstacle and increase the score.
+
+Step 3.2: Add Game Screens
+
+Substep 3.2.1: Create a "Start Screen" that waits for player input to begin.
+
+Substep 3.2.2: Enhance the "Game Over" screen to show the final score and offer a restart option.
+
+Phase 4: Advanced Physics Features
+Step 4.1: Add Wind Gusts
+
+Substep 4.1.1: Modify the Drone class to periodically apply a horizontal force.
+
+Step 4.2: Add Suspended Mass
+
+Substep 4.2.1: Add pendulum physics logic to the Drone class in drone.py.
+
+Substep 4.2.2: Calculate and apply the counter-force from the mass back onto the drone.
+
+Substep 4.2.3: Modify main.py to visually render the rope and mass.
+
+Phase 5: Final Polish
+Step 5.1: Add Graphics and Sound
+
+Substep 5.1.1: Create an assets/ folder for media files.
+
+Substep 5.1.2: Replace all placeholder shapes with sprite images.
+
+Substep 5.1.3: Add sound effects for flapping, scoring, and collisions.
+
+Step 5.2: Refine and Balance
+
+Substep 5.2.1: Tweak game difficulty (drone speed, obstacle frequency, etc.).
+
+Substep 5.2.2: Implement multiple levels with increasing challenges as described in the vision.

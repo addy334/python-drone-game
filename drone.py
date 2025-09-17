@@ -1,0 +1,94 @@
+import pygame
+import random
+import math
+
+vec = pygame.math.Vector2
+
+class Drone:
+    def __init__(self, screen_width, screen_height):
+        """Initializes the Drone's properties."""
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+
+        self.image_original = pygame.image.load('assets/planeBlue1.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image_original, (60, 45))
+        self.rect = self.image.get_rect()
+
+        self.reset(screen_width, screen_height)
+
+    # --- REMOVED move_up() and move_down() methods ---
+
+    def apply_force(self, force):
+        """Adds a force to the drone's acceleration."""
+        # This is now only used for gravity, wind, and the mass
+        self.acceleration += force
+
+    def update(self):
+        """Updates the drone's physics state for one frame."""
+        self.update_wind()
+        self.update_mass()
+
+        # Apply gravity to velocity (not position)
+        self.velocity.y += self.gravity.y
+        
+        # Update position based on final velocity
+        self.position += self.velocity
+        
+        # Reset acceleration for the next frame
+        self.acceleration = vec(0, 0)
+        self.rect.center = self.position
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+        
+    def reset(self, screen_width, screen_height):
+        """Resets the drone to its initial state."""
+        self.position = vec(screen_width / 4, screen_height / 2)
+        self.velocity = vec(0, 0)
+        self.acceleration = vec(0, 0)
+        self.gravity = vec(0, 0.2) # We still want gravity for a natural drift
+        
+        # --- ADDED a speed variable, removed forces ---
+        self.vertical_speed = 5
+        
+        self.rect.center = self.position
+        
+        # ... (rest of reset method is unchanged)
+        self.wind_force = vec(0, 0)
+        self.wind_timer = random.randint(180, 360) 
+        self.wind_duration = 0
+        self.rope_length = 70
+        self.mass_angle = 0
+        self.mass_angular_velocity = 0
+        self.mass_angular_acceleration = 0
+        self.mass_position = vec(0, 0)
+        
+    # ... (update_wind and update_mass methods are unchanged)
+    def update_wind(self):
+        """Manages the timing and application of wind gusts."""
+        if self.wind_duration > 0:
+            self.apply_force(self.wind_force)
+            self.wind_duration -= 1
+            if self.wind_duration <= 0:
+                self.wind_timer = random.randint(180, 360)
+        elif self.wind_timer > 0:
+            self.wind_timer -= 1
+        else:
+            self.wind_duration = random.randint(60, 150)
+            strength = random.uniform(0.1, 0.25)
+            direction = random.choice([-1, 1])
+            self.wind_force = vec(strength * direction, 0)
+    
+    def update_mass(self):
+        """Calculates the swing of the suspended mass and its effect on the drone."""
+        gravity_pull = -0.005
+        self.mass_angular_acceleration = gravity_pull * math.sin(self.mass_angle)
+        self.mass_angular_acceleration += (self.acceleration.x * 0.1) * math.cos(self.mass_angle)
+        self.mass_angular_velocity += self.mass_angular_acceleration
+        self.mass_angle += self.mass_angular_velocity
+        self.mass_angular_velocity *= 0.99
+        mass_pull_strength = 0.05
+        force_x = self.mass_angle * mass_pull_strength
+        self.apply_force(vec(force_x, 0))
+        self.mass_position.x = self.position.x + self.rope_length * math.sin(self.mass_angle)
+        self.mass_position.y = self.position.y + self.rope_length * math.cos(self.mass_angle)

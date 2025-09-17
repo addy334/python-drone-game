@@ -1,0 +1,99 @@
+Of course. That's a great idea. Having a guide for tuning the game's parameters is essential for getting the "feel" just right.
+
+Here is a developer's guide to testing and adjusting the core elements of your game.
+
+***
+
+### ⚙️ Developer Tuning Guide
+
+This guide will show you which values to change to adjust the game's difficulty and feel, which file they are in, and what effect your changes will have.
+
+### 🚀 Drone Physics (`drone.py`)
+
+These values control how the drone feels to fly.
+
+* **Gravity Strength**
+    * **File:** `drone.py`
+    * **Code:** `self.gravity = vec(0, 0.2)`
+    * **What it Does:** Controls how quickly the drone falls.
+    * **How to Tune It:**
+        * **Increase** the value (e.g., to `0.3`) to make the drone fall **faster** and feel **heavier**. This makes the game harder and requires quicker reactions.
+        * **Decrease** the value (e.g., to `0.1`) to make the drone fall **slower** and feel **floatier**. This makes the game easier.
+
+* **Flap/Lift Strength**
+    * **File:** `drone.py`
+    * **Code:** `self.lift_force = -8`
+    * **What it Does:** Controls the power of each flap.
+    * **How to Tune It:** Remember, this is a negative number.
+        * Make it **more negative** (e.g., to `-10`) for a **stronger**, higher jump with each flap.
+        * Make it **less negative** (e.g., to `-6`) for a **weaker**, shorter jump, requiring more frequent tapping.
+
+***
+
+### 💨 Wind Gusts (`drone.py`)
+
+These values control the behavior of the wind.
+
+* **Time Between Gusts**
+    * **File:** `drone.py`
+    * **Code:** `self.wind_timer = random.randint(180, 360)`
+    * **What it Does:** Sets the "calm" period between gusts, measured in frames (60 frames = 1 second).
+    * **How to Tune It:**
+        * **Decrease** these numbers (e.g., `randint(120, 240)`) for **more frequent** wind.
+        * **Increase** them for longer periods of calm.
+
+* **Gust Duration**
+    * **File:** `drone.py`
+    * **Code:** `self.wind_duration = random.randint(60, 150)`
+    * **What it Does:** Sets how long an active gust lasts, in frames.
+    * **How to Tune It:**
+        * **Increase** these numbers for **longer-lasting** wind, making it more challenging.
+        * **Decrease** them for shorter, quicker bursts.
+
+* **Gust Strength**
+    * **File:** `drone.py`
+    * **Code:** `strength = random.uniform(0.1, 0.25)`
+    * **What it Does:** Sets the power of the sideways push.
+    * **How to Tune It:**
+        * **Increase** these numbers (e.g., `uniform(0.2, 0.4)`) for **stronger** wind that pushes the drone more forcefully.
+
+***
+
+### 🧱 Obstacle Properties (`game_elements.py`)
+
+These values control the pipes themselves.
+
+* **Obstacle Speed**
+    * **File:** `game_elements.py`
+    * **Code:** `self.speed = 5`
+    * **What it Does:** Controls how fast the pipes scroll from right to left.
+    * **How to Tune It:**
+        * **Increase** this value to make the game **faster** and more difficult.
+        * **Decrease** it to slow the game down.
+
+* **Gap Size**
+    * **File:** `game_elements.py`
+    * **Code:** `self.gap_size = 200`
+    * **What it Does:** The size of the vertical opening between the top and bottom pipes.
+    * **How to Tune It:**
+        * This is a primary difficulty control. **Decrease** the value (e.g., to `180`) to make the gap **smaller** and the game much harder.
+
+* **Obstacle Dimensions**
+    * You asked if the block dimensions are random. The **width is fixed**, but the **position of the gap is random**.
+    * **File:** `game_elements.py`
+    * **Code for Width:** `self.width = 80`. You can increase/decrease this to make pipes thicker or thinner.
+    * **Code for Gap Position:** `self.gap_y = random.randint(gap_margin, ...)` controls the random vertical placement. The `gap_margin = 50` variable prevents the gap from spawning too close to the top or bottom of the screen. Increase the margin for an easier game.
+
+***
+
+### ⏱️ Game Pacing (`main.py`)
+
+This value controls the overall rhythm of the game.
+
+* **Time Between Obstacles**
+    * **File:** `main.py`
+    * **Code:** `pygame.time.set_timer(ADD_OBSTACLE, 700)`
+    * **What it Does:** Sets the time between when each new pipe set is created, in milliseconds. This controls the **horizontal distance** between obstacles.
+    * **How to Tune It:**
+        * **Decrease** this value (e.g., to `600`) to make pipes spawn **closer together**, increasing the difficulty.
+        * **Increase** it to give the player more breathing room between pipes.
