@@ -4,12 +4,12 @@ import pygame
 import sys
 import random
 from drone import Drone
-from game_elements import Obstacle, Scoreboard, Star, Puff
+from game_elements import Obstacle, Scoreboard, Star, Puff, FloatingRock
 
 # --- Helper Functions ---
 def reset_game():
     """Resets the game state for a new round."""
-    global spawn_pillar, obstacle_type_counter
+    global spawn_pillar, obstacle_type_counter, wind_timer, wind_strength, obstacle_spawn_timer
     player.reset(WIDTH, HEIGHT)
     scoreboard.score = 0
     scoreboard.star_count = 0
@@ -17,6 +17,9 @@ def reset_game():
     stars.clear()
     spawn_pillar = True 
     obstacle_type_counter = 0
+    wind_timer = 300
+    wind_strength = 0
+    obstacle_spawn_timer = 120
     return "PLAYING"
 
 def draw_mass(screen, player):
@@ -48,16 +51,21 @@ medal_silver = pygame.image.load('assets/medalSilver.png').convert_alpha()
 medal_gold = pygame.image.load('assets/medalGold.png').convert_alpha()
 star_icon = pygame.transform.scale(pygame.image.load('assets/starGold.png').convert_alpha(), (40, 40))
 
-# --- Spawner Logic Variables ---
+# --- Spawner and Physics Variables ---
 spawn_pillar = True
 obstacle_type_counter = 0
+star_spawn_countdown = random.randint(1, 5)
+obstacle_spawn_timer = 120
+BASE_SCROLL_SPEED = 5
+scroll_speed = BASE_SCROLL_SPEED
+wind_strength = 0
+wind_timer = 300
 
 # --- Create Game Objects ---
 player = Drone(WIDTH, HEIGHT)
 scoreboard = Scoreboard(WIDTH)
 obstacles = []
 stars = []
-star_spawn_countdown = random.randint(1, 5)
 
 # --- Load Background and Ground Images ---
 background_image = pygame.image.load('assets/background.png').convert()
@@ -67,14 +75,14 @@ bg_x2 = WIDTH
 ground_image = pygame.image.load('assets/groundSnow.png').convert_alpha()
 ground_width = ground_image.get_width()
 ground_y = HEIGHT - ground_image.get_height()
+# --- CORRECTED: Re-added ground_x1 and ground_x2 definitions ---
 ground_x1 = 0
 ground_x2 = ground_width
-scroll_speed = 5
 bg_scroll_speed = scroll_speed / 2
 
 # --- Custom Event for Spawning Obstacles ---
 ADD_OBSTACLE = pygame.USEREVENT + 1
-pygame.time.set_timer(ADD_OBSTACLE, 700)
+pygame.time.set_timer(ADD_OBSTACLE, 700) # This timer is no longer used, can be removed if desired
 
 # 3. Main Game Loop
 running = True
@@ -88,9 +96,50 @@ while running:
                 if event.key == pygame.K_SPACE: game_state = reset_game()
             elif game_state == "GAME_OVER":
                 if event.key == pygame.K_SPACE: game_state = reset_game()
-        
-        if event.type == ADD_OBSTACLE and game_state == "PLAYING":
-            # ... (Spawner logic is unchanged)
+    
+    if game_state == "PLAYING":
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP] or keys[pygame.K_w]: player.move_up()
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]: player.move_down()
+
+    # --- 5. State-Based Logic and Drawing ---
+    if game_state == "PLAYING":
+        wind_timer -= 1
+        if wind_timer <= 0:
+            wind_choice = random.choice(['tailwind', 'headwind', 'none', 'none'])
+            if wind_choice == 'tailwind': wind_strength = 1.0
+            elif wind_choice == 'headwind': wind_strength = -0.5
+            else: wind_strength = 0
+            wind_timer = random.randint(240, 480)
+    
+    scroll_speed = BASE_SCROLL_SPEED + wind_strength
+    bg_scroll_speed = scroll_speed / 2
+
+    bg_x1 -= bg_scroll_speed
+    bg_x2 -= bg_scroll_speed
+    if bg_x1 <= -WIDTH: bg_x1 = bg_x2 + WIDTH
+    if bg_x2 <= -WIDTH: bg_x2 = bg_x1 + WIDTH
+    screen.blit(background_image, (bg_x1, 0))
+    screen.blit(background_image, (bg_x2, 0))
+    
+    # --- CORRECTED: Seamless Ground Scrolling Logic ---
+    ground_x1 -= scroll_speed
+    ground_x2 -= scroll_speed
+    if ground_x1 <= -ground_width:
+        ground_x1 = ground_x2 + ground_width
+    if ground_x2 <= -ground_width:
+        ground_x2 = ground_x1 + ground_width
+    screen.blit(ground_image, (ground_x1, ground_y))
+    screen.blit(ground_image, (ground_x2, ground_y))
+
+
+    if game_state == "START":
+        ready_rect = get_ready_image.get_rect(center=(WIDTH/2, HEIGHT/2))
+        screen.blit(get_ready_image, ready_rect)
+
+    elif game_state == "PLAYING":
+        obstacle_spawn_timer -= 1
+        if obstacle_spawn_timer <= 0:
             def try_spawn_star(pillar_obstacle):
                 global star_spawn_countdown
                 star_spawn_countdown -= 1
@@ -102,7 +151,6 @@ while running:
                         star_y = random.randint(gap_top + star_padding, gap_bottom - star_padding)
                         stars.append(Star(WIDTH + 100, star_y, scroll_speed))
                     star_spawn_countdown = random.randint(1, 5)
-            
             if scoreboard.score < 15:
                 new_pillar = Obstacle(WIDTH, HEIGHT)
                 obstacles.append(new_pillar)
@@ -126,35 +174,10 @@ while running:
                 else:
                     obstacles.append(Puff(WIDTH, HEIGHT, scroll_speed))
                 obstacle_type_counter += 1
+            obstacle_spawn_timer = random.randint(90, 150)
 
-    # --- UPDATED: Check for HELD keys for player movement ---
-    if game_state == "PLAYING":
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            player.move_up()
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            player.move_down()
-
-    # --- 5. State-Based Logic and Drawing ---
-    # ... (Drawing and game state logic is unchanged) ...
-    bg_x1 -= bg_scroll_speed
-    bg_x2 -= bg_scroll_speed
-    if bg_x1 <= -WIDTH: bg_x1 = bg_x2 + WIDTH
-    if bg_x2 <= -WIDTH: bg_x2 = bg_x1 + WIDTH
-    screen.blit(background_image, (bg_x1, 0))
-    screen.blit(background_image, (bg_x2, 0))
-    ground_x1 -= scroll_speed
-    ground_x2 -= scroll_speed
-    if ground_x1 <= -ground_width: ground_x1 = ground_x2 + ground_width
-    if ground_x2 <= -ground_width: ground_x2 = ground_x1 + ground_width
-    screen.blit(ground_image, (ground_x1, ground_y))
-    screen.blit(ground_image, (ground_x2, ground_y))
-
-    if game_state == "START":
-        ready_rect = get_ready_image.get_rect(center=(WIDTH/2, HEIGHT/2))
-        screen.blit(get_ready_image, ready_rect)
-
-    elif game_state == "PLAYING":
+        for obj in obstacles + stars:
+            obj.speed = scroll_speed
         player.update()
         for o in obstacles: o.update()
         for s in stars: s.update()

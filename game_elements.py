@@ -7,7 +7,8 @@ class Obstacle:
         self.screen_width = screen_width
         self.screen_height = screen_height
 
-        self.gap_size = random.randint(250, 350)
+        # --- UPDATED: Wider range for more variety, slightly smaller minimum ---
+        self.gap_size = random.randint(230, 400)
         self.speed = 5
         self.width = 80
         self.body_color = (94, 73, 52) 
@@ -20,8 +21,10 @@ class Obstacle:
         image_top_original = pygame.image.load(top_image_path).convert_alpha()
         image_bottom_original = pygame.image.load(bottom_image_path).convert_alpha()
         
-        self.image_top = pygame.transform.scale(image_top_original, (self.width, 50))
-        self.image_bottom = pygame.transform.scale(image_bottom_original, (self.width, 50))
+        # Scaling the cap images to a consistent size
+        cap_height = 60 
+        self.image_top = pygame.transform.scale(image_top_original, (self.width + 20, cap_height))
+        self.image_bottom = pygame.transform.scale(image_bottom_original, (self.width + 20, cap_height))
 
         self.x = self.screen_width
         gap_margin = 100
@@ -36,11 +39,16 @@ class Obstacle:
         self.passed = False
 
     def update(self):
+        """Moves the entire obstacle assembly from right to left."""
         self.x -= self.speed
+        # Update the main pillar bodies
         self.top_rect.x = self.x
         self.bottom_rect.x = self.x
-        self.top_cap_rect.x = self.x
-        self.bottom_cap_rect.x = self.x
+        
+        # --- FIXED: Update cap positions relative to the bodies ---
+        # This ensures they are always perfectly aligned for collision detection
+        self.top_cap_rect.midtop = self.top_rect.midbottom
+        self.bottom_cap_rect.midbottom = self.bottom_rect.midtop
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.body_color, self.top_rect)
