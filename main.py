@@ -4,21 +4,22 @@ import pygame
 import sys
 import random
 from drone import Drone
-from game_elements import Obstacle, Scoreboard, Star, Puff # Removed FloatingRock
+from game_elements import Obstacle, Scoreboard, Star, Puff
 
 # --- Helper Functions ---
 def reset_game():
     """Resets the game state for a new round."""
-    # Removed unused global variables
+    global spawn_pillar, obstacle_type_counter
     player.reset(WIDTH, HEIGHT)
     scoreboard.score = 0
     scoreboard.star_count = 0
     obstacles.clear()
     stars.clear()
+    spawn_pillar = True 
+    obstacle_type_counter = 0
     return "PLAYING"
 
 def draw_mass(screen, player):
-    """Draws the rope and the suspended mass."""
     rope_color = (180, 180, 180)
     mass_color = (200, 50, 50)
     mass_radius = 8
@@ -47,10 +48,14 @@ medal_silver = pygame.image.load('assets/medalSilver.png').convert_alpha()
 medal_gold = pygame.image.load('assets/medalGold.png').convert_alpha()
 star_icon = pygame.transform.scale(pygame.image.load('assets/starGold.png').convert_alpha(), (40, 40))
 
+# --- Spawner Logic Variables ---
+spawn_pillar = True
+obstacle_type_counter = 0
+
 # --- Create Game Objects ---
 player = Drone(WIDTH, HEIGHT)
 scoreboard = Scoreboard(WIDTH)
-obstacles = [] # This list will now hold Pillars and Puffs
+obstacles = []
 stars = []
 star_spawn_countdown = random.randint(1, 5)
 
@@ -84,33 +89,54 @@ while running:
             elif game_state == "GAME_OVER":
                 if event.key == pygame.K_SPACE: game_state = reset_game()
         
-        # --- SIMPLIFIED Spawning Logic ---
         if event.type == ADD_OBSTACLE and game_state == "PLAYING":
-            # Randomly choose whether to spawn a pillar or a puff
-            if random.choice([True, False]):
-                # Spawn a pillar and try to spawn a star with it
-                new_pillar = Obstacle(WIDTH, HEIGHT)
-                obstacles.append(new_pillar)
-                
+            # ... (Spawner logic is unchanged)
+            def try_spawn_star(pillar_obstacle):
+                global star_spawn_countdown
                 star_spawn_countdown -= 1
                 if star_spawn_countdown <= 0:
                     if len(stars) < 3:
-                        gap_top = new_pillar.gap_y
-                        gap_bottom = new_pillar.gap_y + new_pillar.gap_size
+                        gap_top = pillar_obstacle.gap_y
+                        gap_bottom = pillar_obstacle.gap_y + pillar_obstacle.gap_size
                         star_padding = 40
                         star_y = random.randint(gap_top + star_padding, gap_bottom - star_padding)
                         stars.append(Star(WIDTH + 100, star_y, scroll_speed))
                     star_spawn_countdown = random.randint(1, 5)
+            
+            if scoreboard.score < 15:
+                new_pillar = Obstacle(WIDTH, HEIGHT)
+                obstacles.append(new_pillar)
+                try_spawn_star(new_pillar)
+            elif scoreboard.score < 30:
+                if spawn_pillar:
+                    new_pillar = Obstacle(WIDTH, HEIGHT)
+                    obstacles.append(new_pillar)
+                    try_spawn_star(new_pillar)
+                else:
+                    obstacles.append(FloatingRock(WIDTH, HEIGHT, scroll_speed))
+                spawn_pillar = not spawn_pillar
             else:
-                # Spawn a puff
-                obstacles.append(Puff(WIDTH, HEIGHT, scroll_speed))
-    
+                spawn_type = obstacle_type_counter % 3
+                if spawn_type == 0:
+                    new_pillar = Obstacle(WIDTH, HEIGHT)
+                    obstacles.append(new_pillar)
+                    try_spawn_star(new_pillar)
+                elif spawn_type == 1:
+                    obstacles.append(FloatingRock(WIDTH, HEIGHT, scroll_speed))
+                else:
+                    obstacles.append(Puff(WIDTH, HEIGHT, scroll_speed))
+                obstacle_type_counter += 1
+
+    # --- UPDATED: Check for HELD keys for player movement ---
     if game_state == "PLAYING":
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP] or keys[pygame.K_w]: player.velocity.y = -player.vertical_speed
-        elif keys[pygame.K_DOWN] or keys[pygame.K_s]: player.velocity.y = player.vertical_speed
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            player.move_up()
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            player.move_down()
 
     # --- 5. State-Based Logic and Drawing ---
+    # ... (Drawing and game state logic is unchanged) ...
     bg_x1 -= bg_scroll_speed
     bg_x2 -= bg_scroll_speed
     if bg_x1 <= -WIDTH: bg_x1 = bg_x2 + WIDTH
@@ -137,8 +163,6 @@ while running:
                 scoreboard.score += 5
                 scoreboard.increase_star_count()
                 stars.remove(star)
-        
-        # --- SIMPLIFIED Collision Logic ---
         for o in obstacles:
             if isinstance(o, Obstacle):
                 if not o.passed and o.top_rect.right < player.rect.left:
@@ -147,13 +171,14 @@ while running:
                 player_hitbox = player.rect.inflate(-15, -15)
                 if player_hitbox.colliderect(o.top_rect.inflate(-15,-15)) or player_hitbox.colliderect(o.bottom_rect.inflate(-15,-15)) or player_hitbox.colliderect(o.top_cap_rect.inflate(-15,-15)) or player_hitbox.colliderect(o.bottom_cap_rect.inflate(-15,-15)):
                     game_state = "GAME_OVER"
+            elif isinstance(o, FloatingRock):
+                if player.rect.inflate(-20, -20).colliderect(o.rect.inflate(-30, -30)):
+                    game_state = "GAME_OVER"
             elif isinstance(o, Puff):
                 if player.rect.inflate(-15, -15).colliderect(o.rect.inflate(-15, -15)):
                     game_state = "GAME_OVER"
-        
         if player.rect.top <= 0 or player.rect.bottom >= ground_y + 10:
             game_state = "GAME_OVER"
-        
         player.draw(screen)
         draw_mass(screen, player)
         for o in obstacles: o.draw(screen)

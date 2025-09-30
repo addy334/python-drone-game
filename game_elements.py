@@ -1,9 +1,7 @@
-# game_elements.py
-
 import pygame
 import random
 
-class Obstacle:
+class Obstacle:  
     def __init__(self, screen_width, screen_height):
         """Initializes the Obstacle's properties (pillars)."""
         self.screen_width = screen_width
@@ -96,7 +94,7 @@ class FloatingRock:
 # --- NEW PUFF CLASS ---
 class Puff:
     def __init__(self, screen_width, screen_height, speed):
-        """Initializes a new puff obstacle."""
+        """Initiav lizes a new puff obstacle."""
         self.speed = speed
         
         # Randomly choose between the large and small puff image

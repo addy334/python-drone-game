@@ -1,3 +1,5 @@
+# drone.py
+
 import pygame
 import random
 import math
@@ -16,25 +18,42 @@ class Drone:
 
         self.reset(screen_width, screen_height)
 
-    # --- REMOVED move_up() and move_down() methods ---
+    def move_up(self):
+        """Applies a continuous upward thrust force."""
+        self.apply_force(self.thrust_force)
+
+    def move_down(self):
+        """Applies a continuous downward thrust force."""
+        self.apply_force(self.down_thrust_force)
 
     def apply_force(self, force):
-        """Adds a force to the drone's acceleration."""
-        # This is now only used for gravity, wind, and the mass
-        self.acceleration += force
+        """Adds a force to the drone's acceleration (F=ma => a=F/m)."""
+        self.acceleration += force / self.mass
 
     def update(self):
         """Updates the drone's physics state for one frame."""
+        # --- Run simulations for external forces ---
         self.update_wind()
         self.update_mass()
 
-        # Apply gravity to velocity (not position)
-        self.velocity.y += self.gravity.y
+        # --- REWRITTEN Physics Calculation ---
+        # 1. Apply constant force of gravity
+        self.apply_force(self.gravity)
+
+        # 2. Update velocity based on total acceleration (from all forces)
+        self.velocity += self.acceleration
+
+        # 3. Apply drag to simulate air resistance
+        self.velocity *= self.drag
         
-        # Update position based on final velocity
+        # 4. Cap the vertical velocity to a maximum speed
+        if abs(self.velocity.y) > self.max_vertical_velocity:
+            self.velocity.y = math.copysign(self.max_vertical_velocity, self.velocity.y)
+
+        # 5. Update the drone's position
         self.position += self.velocity
         
-        # Reset acceleration for the next frame
+        # 6. Reset acceleration for the next frame
         self.acceleration = vec(0, 0)
         self.rect.center = self.position
 
@@ -46,14 +65,17 @@ class Drone:
         self.position = vec(screen_width / 4, screen_height / 2)
         self.velocity = vec(0, 0)
         self.acceleration = vec(0, 0)
-        self.gravity = vec(0, 0.2) # We still want gravity for a natural drift
         
-        # --- ADDED a speed variable, removed forces ---
-        self.vertical_speed = 5
-        
+        # --- UPDATED Physics Properties ---
+        self.mass = 1.0
+        self.gravity = vec(0, 0.2 * self.mass) # Gravity is now affected by mass
+        self.thrust_force = vec(0, -0.5)
+        self.down_thrust_force = vec(0, 0.3)
+        self.drag = 0.985 # Value slightly less than 1 for air resistance
+        self.max_vertical_velocity = 8
+
         self.rect.center = self.position
         
-        # ... (rest of reset method is unchanged)
         self.wind_force = vec(0, 0)
         self.wind_timer = random.randint(180, 360) 
         self.wind_duration = 0
@@ -63,7 +85,6 @@ class Drone:
         self.mass_angular_acceleration = 0
         self.mass_position = vec(0, 0)
         
-    # ... (update_wind and update_mass methods are unchanged)
     def update_wind(self):
         """Manages the timing and application of wind gusts."""
         if self.wind_duration > 0:

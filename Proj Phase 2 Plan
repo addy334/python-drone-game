@@ -1,0 +1,39 @@
+Phase 2, Task 1: Overhauling Pendulum & Drone Physics
+The goal is to move away from simple, direct speed control and implement a more realistic physics model where you control the drone's thrust to fight against momentum, drag, and gravity.
+
+Step 1.1: Implement a Realistic Thrust & Momentum Model
+This step will make the drone feel like it has actual weight and momentum.
+
+Sub-step 1.1.1: Add New Physics Properties
+
+Task: We'll introduce new variables to the Drone class, such as mass, thrust_force, drag, and max_velocity.
+
+File to Update: drone.py
+
+Sub-step 1.1.2: Re-implement Force-Based Movement
+
+Task: We will replace the direct velocity control with a system where holding a key applies a continuous thrust force. The update() method will be significantly changed to calculate acceleration based on all forces (thrust, gravity, drag) and then update the velocity, making sure it doesn't exceed a maximum speed.
+
+File to Update: drone.py
+
+Sub-step 1.1.3: Update the Main Loop Controls
+
+Task: The control scheme in main.py will be changed back to calling methods like player.move_up() and player.move_down() instead of directly setting player.velocity.y.
+
+File to Update: main.py
+
+Step 1.2: Model Advanced Pendulum Dynamics
+This step will make the suspended mass feel more interactive and physically accurate.
+
+Sub-step 1.2.1: Implement Drone Tilt (Torque)
+
+Task: We will add logic so that the swinging mass applies a rotational force (torque) to the drone, causing it to visually tilt. This will require new rotation and rotational_velocity variables.
+
+File to Update: drone.py
+
+Sub-step 1.2.2: Add Collision Physics for the Mass
+
+Task: When the pendulum mass (the red ball) hits an obstacle, it shouldn't be an instant "Game Over." We will add logic to make it bounce off the obstacle, creating a large, destabilizing swing that you have to recover from.
+
+File to Update: main.py (to detect the collision) and drone.py (to handle the bounce reaction).
+
