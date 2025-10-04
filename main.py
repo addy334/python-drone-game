@@ -3,13 +3,14 @@
 import pygame
 import sys
 import random
+import math
 from drone import Drone
 from game_elements import Obstacle, Scoreboard, Star, Puff, FloatingRock
 
 # --- Helper Functions ---
 def reset_game():
     """Resets the game state for a new round."""
-    global spawn_pillar, obstacle_type_counter, wind_timer, wind_strength, obstacle_spawn_timer
+    global spawn_pillar, obstacle_type_counter, wind_timer, wind_strength, obstacle_spawn_timer, start_sound_played
     player.reset(WIDTH, HEIGHT)
     scoreboard.score = 0
     scoreboard.star_count = 0
@@ -20,7 +21,18 @@ def reset_game():
     wind_timer = 300
     wind_strength = 0
     obstacle_spawn_timer = 120
+    start_sound_played = False # <-- Reset the start sound flag
+    pygame.mixer.music.play(-1)
     return "PLAYING"
+
+def handle_game_over():
+    """Handles the transition to the game over state."""
+    global game_state
+    if game_state == "PLAYING":
+        game_state = "GAME_OVER"
+        pygame.mixer.music.stop()
+        crash_sound.play()
+        game_over_sound.play()
 
 def draw_mass(screen, player):
     rope_color = (180, 180, 180)
@@ -31,6 +43,7 @@ def draw_mass(screen, player):
 
 # 1. Initialization
 pygame.init()
+pygame.mixer.init()
 
 # 2. Screen Setup
 WIDTH, HEIGHT = 1280, 720
@@ -41,6 +54,14 @@ WHITE = (255, 255, 255)
 clock = pygame.time.Clock()
 FPS = 60
 game_state = "START"
+
+# --- Load Sound Files ---
+crash_sound = pygame.mixer.Sound('assets/audio/impact.wav')
+star_sound = pygame.mixer.Sound('assets/audio/star_collect.wav')
+game_over_sound = pygame.mixer.Sound('assets/audio/game_over.wav')
+start_sound = pygame.mixer.Sound('assets/audio/start.wav') # <-- Load new start sound
+pygame.mixer.music.load('assets/audio/background.wav')
+pygame.mixer.music.set_volume(0.4)
 
 # --- Load UI Graphics ---
 get_ready_image = pygame.image.load('assets/textGetReady.png').convert_alpha()
@@ -60,6 +81,7 @@ BASE_SCROLL_SPEED = 5
 scroll_speed = BASE_SCROLL_SPEED
 wind_strength = 0
 wind_timer = 300
+start_sound_played = False # <-- New flag for start sound
 
 # --- Create Game Objects ---
 player = Drone(WIDTH, HEIGHT)
@@ -75,34 +97,33 @@ bg_x2 = WIDTH
 ground_image = pygame.image.load('assets/groundSnow.png').convert_alpha()
 ground_width = ground_image.get_width()
 ground_y = HEIGHT - ground_image.get_height()
-# --- CORRECTED: Re-added ground_x1 and ground_x2 definitions ---
-ground_x1 = 0
-ground_x2 = ground_width
+ground_scroll = 0
+num_ground_tiles = math.ceil(WIDTH / ground_width) + 1
 bg_scroll_speed = scroll_speed / 2
-
-# --- Custom Event for Spawning Obstacles ---
-ADD_OBSTACLE = pygame.USEREVENT + 1
-pygame.time.set_timer(ADD_OBSTACLE, 700) # This timer is no longer used, can be removed if desired
 
 # 3. Main Game Loop
 running = True
 while running:
-    # --- 4. Event Handling ---
+    # 4. Event Handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT: running = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE: running = False
             if game_state == "START":
-                if event.key == pygame.K_SPACE: game_state = reset_game()
+                if event.key == pygame.K_SPACE:
+                    start_sound.stop() # Stop the start sound
+                    game_state = reset_game()
+            # --- UPDATED: Go back to START screen on restart ---
             elif game_state == "GAME_OVER":
-                if event.key == pygame.K_SPACE: game_state = reset_game()
-    
+                if event.key == pygame.K_SPACE:
+                    game_state = "START"
+
     if game_state == "PLAYING":
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP] or keys[pygame.K_w]: player.move_up()
         if keys[pygame.K_DOWN] or keys[pygame.K_s]: player.move_down()
 
-    # --- 5. State-Based Logic and Drawing ---
+    # 5. State-Based Logic and Drawing
     if game_state == "PLAYING":
         wind_timer -= 1
         if wind_timer <= 0:
@@ -122,22 +143,25 @@ while running:
     screen.blit(background_image, (bg_x1, 0))
     screen.blit(background_image, (bg_x2, 0))
     
-    # --- CORRECTED: Seamless Ground Scrolling Logic ---
-    ground_x1 -= scroll_speed
-    ground_x2 -= scroll_speed
-    if ground_x1 <= -ground_width:
-        ground_x1 = ground_x2 + ground_width
-    if ground_x2 <= -ground_width:
-        ground_x2 = ground_x1 + ground_width
-    screen.blit(ground_image, (ground_x1, ground_y))
-    screen.blit(ground_image, (ground_x2, ground_y))
-
+    for i in range(num_ground_tiles):
+        screen.blit(ground_image, (i * ground_width + ground_scroll, ground_y))
+    ground_scroll -= scroll_speed
+    if abs(ground_scroll) > ground_width:
+        ground_scroll = 0
 
     if game_state == "START":
+        # --- Play start sound once ---
+        if not start_sound_played:
+            pygame.mixer.music.stop()
+            start_sound.play(-1) # Play start sound on a loop
+            start_sound_played = True
+        
         ready_rect = get_ready_image.get_rect(center=(WIDTH/2, HEIGHT/2))
         screen.blit(get_ready_image, ready_rect)
 
     elif game_state == "PLAYING":
+        start_sound_played = False # Reset flag for next time
+        
         obstacle_spawn_timer -= 1
         if obstacle_spawn_timer <= 0:
             def try_spawn_star(pillar_obstacle):
@@ -183,6 +207,7 @@ while running:
         for s in stars: s.update()
         for star in stars[:]:
             if player.rect.colliderect(star.rect):
+                star_sound.play()
                 scoreboard.score += 5
                 scoreboard.increase_star_count()
                 stars.remove(star)
@@ -193,15 +218,12 @@ while running:
                     scoreboard.increase_score()
                 player_hitbox = player.rect.inflate(-15, -15)
                 if player_hitbox.colliderect(o.top_rect.inflate(-15,-15)) or player_hitbox.colliderect(o.bottom_rect.inflate(-15,-15)) or player_hitbox.colliderect(o.top_cap_rect.inflate(-15,-15)) or player_hitbox.colliderect(o.bottom_cap_rect.inflate(-15,-15)):
-                    game_state = "GAME_OVER"
-            elif isinstance(o, FloatingRock):
-                if player.rect.inflate(-20, -20).colliderect(o.rect.inflate(-30, -30)):
-                    game_state = "GAME_OVER"
-            elif isinstance(o, Puff):
+                    handle_game_over()
+            elif isinstance(o, (FloatingRock, Puff)):
                 if player.rect.inflate(-15, -15).colliderect(o.rect.inflate(-15, -15)):
-                    game_state = "GAME_OVER"
+                    handle_game_over()
         if player.rect.top <= 0 or player.rect.bottom >= ground_y + 10:
-            game_state = "GAME_OVER"
+            handle_game_over()
         player.draw(screen)
         draw_mass(screen, player)
         for o in obstacles: o.draw(screen)
@@ -209,6 +231,8 @@ while running:
         scoreboard.draw(screen)
         
     elif game_state == "GAME_OVER":
+        start_sound_played = False # Reset flag for next time
+        
         player.draw(screen)
         draw_mass(screen, player)
         for o in obstacles: o.draw(screen)

@@ -1,6 +1,8 @@
 Drone Navigation Sim (Drone Flappy Bird)
 A 2D side-scrolling game built from scratch in Python and Pygame, evolving the "Flappy Bird" concept into a challenging, physics-based drone navigation simulation. The primary goal is to pilot a drone carrying an unstable, suspended mass through a procedurally generated and dynamic environment.
+
 ![alt text](image-1.png)
+
 Key Features
 Advanced 2D Physics Engine:
 
